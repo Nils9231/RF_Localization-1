@@ -36,7 +36,7 @@ Rf.set_txparams(freqtx, tx_pos)
 Rf.set_samplesize(32)
 
 #Rf.plot_power_spectrum_density()
-Rf.plot_txrss_live()
+#Rf.plot_txrss_live()
 
 
 
@@ -60,12 +60,15 @@ tx_abs_pos = [[1060, 470],  # 433.9MHz
 
 """
 
-"""
-loc = rf.LocEar(434.0e6, freqtx, freqspan, alpha, gamma, tx_abs_pos)
+#what is the difference between tx and tx_abs?
+alpha = [0.0049550889215578707, 0.0014995346993174063, 0.003996827460000291, 0.0012405884802065836]
+gamma = [19.676182987676732, 17.885306918755454, 12.578518673986212, 21.37489560428757]
+tx_abs_pos=tx_pos
+#loc = rf.LocEar(434.0e6, freqtx, freqspan, alpha, gamma, tx_abs_pos)
 
 #loc.plot_txdist_live()
 
+Rf.set_calparams(alpha, gamma);
 x0 = np.array([600, 400])  # initial estimate
-loc.set_samplesize(16)
-loc.map_path_ekf(x0, 'h_rss', True, False, False)
-"""
+Rf.set_samplesize(16)
+Rf.map_path_ekf(x0, 'h_rss', False, False, False,False,True)

@@ -618,22 +618,22 @@ class RfEar(object):
 
         # curve fit with calibrated value -
         # dist_ref, alpha, gamma are fixed -> gamma_diff_opt is the change in gamma by new meas
-        gamma_diff_opt, pcov = curve_fit(rsm_func, [dist_ref, self.__alpha[numtx], self.__gamma[numtx]], p_ref)
+        gamma_diff_opt, pcov = curve_fit(rsm_func, [dist_ref, self.__txalpha[numtx], self.__txgamma[numtx]], p_ref)
         del pcov
-        print ('gamma alt: ' + str(self.__gamma[numtx]))
-        self.__gamma[numtx] = self.__gamma[numtx] + gamma_diff_opt[0]  # update gamma with calibration
+        print ('gamma alt: ' + str(self.__txgamma[numtx]))
+        self.__txgamma[numtx] = self.__txgamma[numtx] + gamma_diff_opt[0]  # update gamma with calibration
         print ('gamma_diff: ' + str(gamma_diff_opt[0]))
-        print ('gamma neu: ' + str(self.__gamma[numtx]))
+        print ('gamma neu: ' + str(self.__txgamma[numtx]))
 
     def get_caldata(self, numtx=0):
         """Returns the calibrated RSM params."""
-        return self.__alpha[numtx], self.__gamma[numtx]
+        return self.__txalpha[numtx], self.__txgamma[numtx]
 
 
 
 
 
-    def map_path_ekf(self, x0, h_func_select, bplot=True, blog=False, bprintdata=False):
+    def map_path_ekf(self, x0, h_func_select, bplot=True, blog=False, bprintdata=False,bprintRCtime=False, save_EKF_data=False):
         """ map/track the position of the mobile node using an EKF
 
         Keyword arguments:
@@ -642,6 +642,8 @@ class RfEar(object):
         :param bplot -- Activate/Deactivate liveplotting the data (True/False)
         :param blog -- activate data logging to file (default: False)
         :param bprintdata - activate data print to console(default: False)
+        :param bprintRCtime - activate time print for receiving data to console
+        :param save_EKF_data - save in the ekf.txt file the current predicted position and ekf covariance values
         """
 
         # measurement function
@@ -729,12 +731,12 @@ class RfEar(object):
                 circle_meas_est.append(plt.Circle((txpos_single[0], txpos_single[1]), 0.01, color='g', fill=False))
                 ax.add_artist(circle_meas_est[i])
         """ initialize tracking setup """
-        print(str(self.__alpha))
-        print(str(self.__gamma))
+        print(str(self.__txalpha))
+        print(str(self.__txgamma))
         print(str(txpos))
         tx_param = []
         for itx in range(self.__numoftx):
-            tx_param.append([txpos[itx],self.__alpha[itx], self.__gamma[itx]])
+            tx_param.append([txpos[itx],self.__txalpha[itx], self.__txgamma[itx]])
         print(str(np.asarray(tx_param)))
         """ initialize EKF """
         # standard deviations
@@ -762,6 +764,13 @@ class RfEar(object):
 
         """ Start EKF-loop"""
         tracking = True
+
+        # initialization for bprinttime
+        n = 0
+        import time
+        start_time = time.time()
+
+
         while tracking:
             try:
                 # iterate through all tx-rss-values
@@ -810,6 +819,44 @@ class RfEar(object):
                 if bprintdata:
                     print(str(x_est) + ', ' + str(p_mat))  # print data to console
 
+
+                if bprintRCtime:
+
+                    n=n+1
+                    time_dif= time.time() - start_time
+
+                    if time_dif>=1:
+                            if n==1:
+                                print("--- %s seconds ---" % (time_dif))
+                                start_time=time.time()
+                                n=0
+                            else:
+                                print("--- %s iterations per second ---" % (n))
+                                start_time=time.time()
+                                n=0
+
+
+
+                if save_EKF_data:
+
+                    Position = np.matrix('0 0; 0 0')
+                    Position[0, 0] = x_est[0];
+                    Position[0, 1] = x_est[1];
+                   # f = open("/home/pi/Localization/RF_Localization_Test/EKF.txt", "w")
+                    f = open("EKF.txt", "w")
+                    f.write(
+                        str(Position[0, 0]) + " " + str(Position[0, 1]) + " " + str(p_mat[0, 0]) + "" + str(p_mat[0, 1]) + " " + str(
+                            p_mat[1, 0]) + " " + str(p_mat[1, 1]))
+                    f.close
+
+                    #f2 = open("/home/pi/Localization/RF_Localization_Test/Position.txt", "a")
+                    f2 = open("Position.txt", "a")
+                    f2.write(str(Position[0, 0]) + " " + str(Position[0, 1]) + "\n")
+                    f2.close
+
+
+
+
             except KeyboardInterrupt:
                 print ('Localization interrupted by user')
                 tracking = False
@@ -844,8 +891,8 @@ class RfEar(object):
         :param rss -- received power values [dB]
         :param numtx  -- number of the tx which rss is processed. Required to use the corresponding alpha and gamma-values.
         """
-        z = 20 / (np.log(10) * self.__alpha[numtx]) * lambertw(
-            np.log(10) * self.__alpha[numtx] / 20 * np.exp(-np.log(10) / 20 * (rss + self.__gamma[numtx])))
+        z = 20 / (np.log(10) * self.__txalpha[numtx]) * lambertw(
+            np.log(10) * self.__txalpha[numtx] / 20 * np.exp(-np.log(10) / 20 * (rss + self.__txgamma[numtx])))
         return z.real  # [mm]
 
     def plot_txdist_live(self,freqspan=2e4, numofplottedsamples=250):
@@ -909,7 +956,7 @@ class RfEar(object):
         """Return a string representing the type of RfEar this is."""
         print ('LocEar,')
         print ('Number of TX: ' + str(self.__numoftx))
-        print ('Alpha: ' + str(self.__alpha) + ', gamma: ' + str(self.__gamma))
+        print ('Alpha: ' + str(self.__txalpha) + ', gamma: ' + str(self.__txgamma))
         print ('Tuned to:' + str(self.get_freq()) + ' MHz,')
         self.get_srate()
         print ('Reads ' + str(self.get_size()) + '*1024 8-bit I/Q-samples from SDR device.')
