@@ -4,12 +4,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 
-wp_filename = 'wp_list_wo-tx_field_50mm.txt'
-x0 = [0,0]
-xn = [3000, 1500]
-dxdy = [50, 50]
+wp_filename = 'wp_list_wo-tx_field_100mm_inside.txt'
+x0 = [600,300]              # 0 0
+xn = [2700, 1400]       #3000 15000
+dxdy = [100, 100]       #50 50
 
-rf_tools.wp_generator(wp_filename, x0, xn, dxdy, 5.0, True)
+rf_tools.wp_generator(wp_filename, x0, xn, dxdy, 3.0, True) #3
 
 
 txpos_offset = np.array([0, 0])
@@ -68,7 +68,9 @@ tx_abs_pos=tx_pos
 
 #loc.plot_txdist_live()
 
+"""
 Rf.set_calparams(alpha, gamma);
 x0 = np.array([600, 400])  # initial estimate
 Rf.set_samplesize(16)
 Rf.map_path_ekf(x0, 'h_rss', False, False, False,False,True)
+"""
