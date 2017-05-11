@@ -843,14 +843,14 @@ class RfEar(object):
                     Position[0, 0] = x_est[0];
                     Position[0, 1] = x_est[1];
                    # f = open("/home/pi/Localization/RF_Localization_Test/EKF.txt", "w")
-                    f = open("EKF.txt", "w")
+                    f = open("/home/pi/src/RF_Localization/EKF.txt", "w")
                     f.write(
                         str(Position[0, 0]) + " " + str(Position[0, 1]) + " " + str(p_mat[0, 0]) + "" + str(p_mat[0, 1]) + " " + str(
                             p_mat[1, 0]) + " " + str(p_mat[1, 1]))
                     f.close
 
                     #f2 = open("/home/pi/Localization/RF_Localization_Test/Position.txt", "a")
-                    f2 = open("Position.txt", "a")
+                    f2 = open("/home/pi/src/RF_Localization/Position.txt", "a")
                     f2.write(str(Position[0, 0]) + " " + str(Position[0, 1]) + "\n")
                     f2.close
 
