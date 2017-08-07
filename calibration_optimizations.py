@@ -161,7 +161,28 @@ def analyze_measdata_from_file(analyze_tx=[1,2,3,4,5,6], meantype='db_mean'):
         """
         Model fit
         """
-        #Model selection
+
+        Test_vector = np.zeros((540,), dtype=np.int)
+
+        #Test_vector = [620, 640, 660, 1230, 1250, 1270]
+        counter = 0
+        Test_array = np.arange(549,1464,1)
+        #print("Test_array size" + "" + str(Test_array))
+
+        for ntx in range (0, 15):
+            for itx in range (16, 52):
+                Test_vector[counter] = Test_array[itx+61*ntx]
+                counter = counter+1
+                #print("Test_Vector=" + "" + str(Test_vector))
+
+        #print("Test_Vector size"+""+str(Test_vector))
+        #Test_vector = np.arange(305, 1708, 1)
+        length_Test_vector = len(Test_vector)
+        #print("TestVector"+str(Test_vector.shape))
+        print("length TestVector" + str(length_Test_vector))
+
+
+        # Model selection
         model_mode = 1
         # set Model mode to a value 0-1
         # param 0: use all points
@@ -171,53 +192,62 @@ def analyze_measdata_from_file(analyze_tx=[1,2,3,4,5,6], meantype='db_mean'):
             """Range Sensor Model (RSM) structure."""
             return -20 * np.log10(dist_rsm) - alpha_rsm * dist_rsm - gamma_rsm  # rss in db
 
+        alpha_Groundtruth = []
+        gamma_Groundtruth = []
+        rdist_Groundtruth = []
+
         alpha = []
         gamma = []
         rdist = []
 
-        if model_mode == 0:
+    #if model_mode == 0:
 
-            for itx in analyze_tx:
-                rdist_vec = plotdata_mat[:, 0:2] - txpos[itx, 0:2]  # r_wp -r_txpos
+        for itx in analyze_tx:
+            rdist_vec = plotdata_mat[:, 0:2] - txpos[itx, 0:2]  # r_wp -r_txpos
 
-                rdist_temp = np.asarray(np.linalg.norm(rdist_vec, axis=1))  # distance norm: |r_wp -r_txpos|
+            rdist_temp_Groundtruth = np.asarray(np.linalg.norm(rdist_vec, axis=1))  # distance norm: |r_wp -r_txpos|
 
-                rssdata = plotdata_mat[:, 2+itx]  # rss-mean for each wp
+            rssdata = plotdata_mat[:, 2+itx]  # rss-mean for each wp
 
-                popt, pcov = curve_fit(rsm_model, rdist_temp, rssdata)
-                del pcov
+            popt, pcov = curve_fit(rsm_model, rdist_temp_Groundtruth, rssdata)
+            del pcov
 
-                alpha.append(popt[0])
-                gamma.append(popt[1])
-                # print('tx #' + str(itx+1) + ' alpha= ' + str(alpha[itx]) + ' gamma= ' + str(gamma[itx]))
-                rdist.append(rdist_temp)
+            alpha_Groundtruth.append(popt[0])
+            gamma_Groundtruth.append(popt[1])
+            # print('tx #' + str(itx+1) + ' alpha= ' + str(alpha[itx]) + ' gamma= ' + str(gamma[itx]))
+            rdist_Groundtruth.append(rdist_temp_Groundtruth)
 
-            rdist_temp = np.reshape(rdist, [num_tx, totnumwp])
+        rdist_temp_Groundtruth = np.reshape(rdist_Groundtruth, [num_tx, totnumwp])
 
-        elif model_mode == 1:
-            for itx in analyze_tx:
-                rdist_vec = plotdata_mat[:, 0:2] - txpos[itx, 0:2]  # r_wp -r_txpos
-                rdist_temp = np.asarray(np.linalg.norm(rdist_vec, axis=1))  # distance norm: |r_wp -r_txpos|
-
-                #print("rdist_temp=" + str(rdist_temp))
-                rssdata = plotdata_mat[:, 2+itx]  # rss-mean for each wp
-
-                popt, pcov = curve_fit(rsm_model, rdist_temp, rssdata)
-                del pcov
-
-                alpha.append(popt[0])
-                gamma.append(popt[1])
-                # print('tx #' + str(itx+1) + ' alpha= ' + str(alpha[itx]) + ' gamma= ' + str(gamma[itx]))
-                rdist.append(rdist_temp)
-
-            rdist_temp = np.reshape(rdist, [num_tx, totnumwp])
-            print(num_tx)
+    #elif model_mode == 1:
+        for itx in analyze_tx:
+            rdist_vec = plotdata_mat[Test_vector[:], 0:2] - txpos[itx, 0:2]  # r_wp -r_txpos
+            rdist_temp = np.asarray(np.linalg.norm(rdist_vec, axis=1))  # distance norm: |r_wp -r_txpos|
 
 
-        print("rdist_temp size=" + str(rdist_temp.shape))
+            #print("rdist_vec="+str(rdist_vec.shape))
+            #print("rdist_temp=" + str(rdist_temp))
+            rssdata = plotdata_mat[Test_vector[:] , 2+itx]  # rss-mean for each wp
+
+            popt, pcov = curve_fit(rsm_model, rdist_temp, rssdata)
+            del pcov
+
+
+            alpha.append(popt[0])
+            gamma.append(popt[1])
+            # print('tx #' + str(itx+1) + ' alpha= ' + str(alpha[itx]) + ' gamma= ' + str(gamma[itx]))
+            rdist.append(rdist_temp)
+
+        #rdist_temp = np.reshape(rdist, [num_tx, totnumwp])
+        rdist_temp = np.reshape(rdist, [num_tx, length_Test_vector])
+
+        #print(num_tx)
+        #print("rdist_temp size=" + str(rdist_temp.shape))
 
 
         print('\nVectors for convenient copy/paste')
+        print('alpha_Groundtruth = ' + str(alpha_Groundtruth))
+        print('gamma_Groundtruth = ' + str(gamma_Groundtruth))
         print('alpha = ' + str(alpha))
         print('gamma = ' + str(gamma))
 
@@ -225,12 +255,12 @@ def analyze_measdata_from_file(analyze_tx=[1,2,3,4,5,6], meantype='db_mean'):
         Plots
         """
 
-        See_Plots = False           # Set to True if you want to see the plots
+        See_Plots = True      # Set to True if you want to see the plots
         x = plotdata_mat[:, 0]
         y = plotdata_mat[:, 1]
 
         if See_Plots == True:
-            plot_fig1 = False
+            plot_fig1 = True
             if plot_fig1:
                 fig = plt.figure(1)
                 for itx in analyze_tx:
@@ -268,17 +298,26 @@ def analyze_measdata_from_file(analyze_tx=[1,2,3,4,5,6], meantype='db_mean'):
                     ax.axis('equal')
                     ax.set_title('RSS field for TX# ' + str(itx + 1))
 
-
-
-
+            plot_fig3 = True
+            if plot_fig3:
+                fig = plt.figure(3)
+                #plt.ion()
+                for itx_plot in analyze_tx:
+                    plt.plot(txpos[itx_plot - 1, 0], txpos[itx_plot - 1, 1], 'or')
+                plt.plot(plotdata_mat[Test_vector[:], 0], plotdata_mat[Test_vector[:], 1], 'b.-')
+                plt.xlabel('Distance in mm (belt-drive)')
+                plt.ylabel('Distance in mm (spindle-drive)')
+                plt.xlim(x0[0] - 10, xn[0] + 100)
+                plt.ylim(x0[1] - 10, xn[1] + 100)
+                plt.grid()
 
 
             plot_fig2 = True
             if plot_fig2:
                 fig = plt.figure(2)
                 for itx in analyze_tx:
-                    rss_mean = plotdata_mat[:, 2 + itx]
-                    rss_var = plotdata_mat[:, 2 + num_tx + itx]
+                    rss_mean = plotdata_mat[Test_vector[:], 2 + itx]
+                    rss_var = plotdata_mat[Test_vector[:], 2 + num_tx + itx]
 
                     rdist = np.array(rdist_temp[itx, :], dtype=float)
                     rss_mean = np.array(rss_mean, dtype=float)
@@ -288,10 +327,11 @@ def analyze_measdata_from_file(analyze_tx=[1,2,3,4,5,6], meantype='db_mean'):
                         pos = 111
                     ax = fig.add_subplot(pos)
                     ax.errorbar(rdist, rss_mean, yerr=rss_var,
-                                fmt='ro', ecolor='g', label='Original Data')
+                               fmt='ro', ecolor='g', label='Original Data')
 
-                    rdata = np.linspace(np.min(rdist), np.max(rdist), num=1000)
+                    rdata = np.linspace(np.min(rdist_Groundtruth), np.max(rdist_Groundtruth), num=1000)
                     ax.plot(rdata, rsm_model(rdata, alpha[itx], gamma[itx]), label='Fitted Curve')
+                    ax.plot(rdata, rsm_model(rdata, alpha_Groundtruth[itx], gamma_Groundtruth[itx]), label='Fitted Groundtruth')
                     ax.legend(loc='upper right')
                     ax.grid()
                     ax.set_ylim([-110, -10])
