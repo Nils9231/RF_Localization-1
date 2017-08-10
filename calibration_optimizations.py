@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
 import hippocampus_toolbox as hc_tools
-
+import rf_plots
 
 def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6], meantype='db_mean'):
     """
@@ -156,14 +156,14 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6], meantype='db_mean'
         Parameter Calculation
         """
 
-        def param_calc(Inside_Vector, length_Inside_Vector, vectorName):
+        def param_calc(Cal_Vector, length_Cal_Vector, vectorName):
             alpha = []
             gamma = []
             rdist = []
             for itx in analyze_tx:
-                rdist_vec = plotdata_mat[Inside_Vector[:], 0:2] - txpos[itx, 0:2]  # r_wp -r_txpos
+                rdist_vec = plotdata_mat[Cal_Vector[:], 0:2] - txpos[itx, 0:2]  # r_wp -r_txpos
                 rdist_temp = np.asarray(np.linalg.norm(rdist_vec, axis=1))  # distance norm: |r_wp -r_txpos|
-                rssdata = plotdata_mat[Inside_Vector[:], 2 + itx]  # rss-mean for each wp
+                rssdata = plotdata_mat[Cal_Vector[:], 2 + itx]  # rss-mean for each wp
                 popt, pcov = curve_fit(rsm_model, rdist_temp, rssdata)
                 del pcov
 
@@ -174,50 +174,53 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6], meantype='db_mean'
             print('\nVectors for convenient copy/paste for '+str(vectorName) )
             print('alpha = ' + str(alpha))
             print('gamma = ' + str(gamma))
-            rdist_temp = np.reshape(rdist, [num_tx, length_Inside_Vector])
+            rdist_temp = np.reshape(rdist, [num_tx, length_Cal_Vector])
             return [alpha, gamma, rdist_temp]
 
         """
         Model fit
         """
         # Model selection
-        model_groundtruth = False
-        model_Inside = True
-        model_Line_10 = False
-        model_Line_5 = False
+        model_groundtruth = True
+        model_Inside = False
+        model_Line_long = False
+        model_Line_short = True
         model_Z_Vector_small = True
-        Data_Set_Pool = 3
-        # set Data_Set_Pool to a value 0-3
-        # param 0: use all points
-        # param 1: use only 10 points
+        model_Z_Vector_long = True
+        Data_Set_Pool = 2   # set Data_Set_Pool to a value 0-4
+
 
         Inside_Vector = np.zeros((540,), dtype=np.int)
         counter = 0
         Inside_array = np.arange(549, 1464, 1)
         Groundtruth_Vector = np.arange(0, totnumwp, 1)
-        Line_Vector_10 = np.arange(992, 1028, 1)
-        Line_Vector_5 = np.arange(992, 1028, 8)
-        Z_Vector_small = [999, 1304, 1609, 1444, 1021, 1326, 1631]
+        Line_Vector_long = np.arange(992, 1028, 1)
+        #Line_Vector_short = np.arange(992, 1028, 8)
+        #Line_Vector_short = np.arange(976, 1038, 20)
+        Line_Vector_short = [982, 992,1001, 1009,1018, 1027, 1036]
+        Z_Vector_long= [631, 936, 1241,1064, 947,831, 654, 959, 1264]
+        Z_Vector_small = [631, 1241, 948, 654, 1264]
         for ntx in range(0, 15):
             for itx in range(16, 52):
                 Inside_Vector[counter] = Inside_array[itx + 61 * ntx]
                 counter = counter + 1
 
         length_Inside_Vector = len(Inside_Vector)
-        length_Line_Vector_10 = len(Line_Vector_10)
-        length_Line_Vector_5 = len(Line_Vector_5)
+        length_Line_Vector_long = len(Line_Vector_long)
+        length_Line_Vector_short = len(Line_Vector_short)
         length_Z_Vector_small = len(Z_Vector_small)
+        length_Z_Vector_long = len(Z_Vector_long)
 
         Name_Groundtruth_Vector = 'Groundtruth_Vector'
         Name_Inside_Vector = 'Inside_Vector'
-        Name_Line_Vector_10 = 'Long Line Vector'
-        Name_Line_Vector_5 = 'Short Line Vector'
+        Name_Line_Vector_long = 'Long Line Vector'
+        Name_Line_Vector_short = 'Short Line Vector'
         Name_Z_Vector_small = 'Small Z Vector'
+        Name_Z_Vector_long = 'Long Z Vector'
 
         def rsm_model(dist_rsm, alpha_rsm, gamma_rsm):
             """Range Sensor Model (RSM) structure."""
             return -20 * np.log10(dist_rsm) - alpha_rsm * dist_rsm - gamma_rsm  # rss in db
-
 
 
 
@@ -229,17 +232,28 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6], meantype='db_mean'
         if model_groundtruth == True:
             (alpha_Groundtruth, gamma_Groundtruth, rdist_temp_groundtruth) = param_calc(Groundtruth_Vector, totnumwp, Name_Groundtruth_Vector)
 
-        if model_Line_10 == True:
-            (alpha_line_10, gamma_line_10, rdist_temp_line_10 ) = param_calc(Line_Vector_10, length_Line_Vector_10,Name_Line_Vector_10)
+        if model_Line_long == True:
+            (alpha_line_long, gamma_line_long, rdist_temp_line_long ) = param_calc(Line_Vector_long, length_Line_Vector_long,Name_Line_Vector_long)
 
-        if model_Line_5 == True:
-            (alpha_line_5, gamma_line_5, rdist_temp_line_5) = param_calc(Line_Vector_5, length_Line_Vector_5,Name_Line_Vector_5)
+        if model_Line_short == True:
+            (alpha_line_short, gamma_line_short, rdist_temp_line_short) = param_calc(Line_Vector_short, length_Line_Vector_short,Name_Line_Vector_short)
 
         if model_Z_Vector_small == True:
             (alpha_Z_Vector_small, gamma_Z_Vector_small, rdist_temp_Z_Vector_small) = param_calc(Z_Vector_small, length_Z_Vector_small,Name_Z_Vector_small)
 
+        if model_Z_Vector_long == True:
+            (alpha_Z_Vector_long, gamma_Z_Vector_long, rdist_temp_Z_Vector_long) = param_calc(Z_Vector_long, length_Z_Vector_long,Name_Z_Vector_long)
 
 
+        """
+        Error Estimation
+        """
+        """
+         estimated_plotdata = plotdata_mat
+        rdist_vec = plotdata_mat[:, 0:2] - txpos[itx, 0:2]
+        rdist_temp = np.asarray(np.linalg.norm(rdist_vec, axis=1))  # distance norm: |r_wp -r_txpos|
+        estimated_plotdata[:, 2 + itx] = rsm_model(rdist_temp, alpha_line_short[itx], gamma_line_short[itx])
+        """
 
 
         """
@@ -293,14 +307,17 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6], meantype='db_mean'
                 Data_Set = Inside_Vector
                 RDIST = rdist_temp
             elif Data_Set_Pool == 1:
-                Data_Set = Line_Vector_10
-                RDIST = rdist_temp_line_10
+                Data_Set = Line_Vector_long
+                RDIST = rdist_temp_line_long
             elif Data_Set_Pool == 2:
-                Data_Set = Line_Vector_5
-                RDIST = rdist_temp_line_5
+                Data_Set = Line_Vector_short
+                RDIST = rdist_temp_line_short
             elif Data_Set_Pool == 3:
                 Data_Set = Z_Vector_small
                 RDIST = rdist_temp_Z_Vector_small
+            elif Data_Set_Pool == 4:
+                Data_Set = Z_Vector_long
+                RDIST = rdist_temp_Z_Vector_long
 
             plot_fig3 = True
             if plot_fig3:
@@ -348,21 +365,73 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6], meantype='db_mean'
                     if model_groundtruth == True:
                         ax.plot(rdata, rsm_model(rdata, alpha_Groundtruth[itx], gamma_Groundtruth[itx]),
                                 label='Fitted Groundtruth')
-                    if model_Line_10 == True:
-                        ax.plot(rdata, rsm_model(rdata, alpha_line_10[itx], gamma_line_10[itx]),
-                                label=('Fitted Curve: Line with ' + str(length_Line_Vector_10) + 'WP'))
-                    if model_Line_5 == True:
-                        ax.plot(rdata, rsm_model(rdata, alpha_line_5[itx], gamma_line_5[itx]),
-                                label=('Fitted Curve: Line with' + str(length_Line_Vector_5) + 'WP'))
+                    if model_Line_long == True:
+                        ax.plot(rdata, rsm_model(rdata, alpha_line_long[itx], gamma_line_long[itx]),
+                                label=('Fitted Curve: Line with ' + str(length_Line_Vector_long) + 'WP'))
+                    if model_Line_short == True:
+                        ax.plot(rdata, rsm_model(rdata, alpha_line_short[itx], gamma_line_short[itx]),
+                                label=('Fitted Curve: Line with' + str(length_Line_Vector_short) + 'WP'))
                     if model_Z_Vector_small == True:
                         ax.plot(rdata, rsm_model(rdata, alpha_Z_Vector_small[itx], gamma_Z_Vector_small[itx]),
                                 label=('Fitted Curve: Z with' + str(length_Z_Vector_small) + 'WP'))
+                    if model_Z_Vector_long == True:
+                        ax.plot(rdata, rsm_model(rdata, alpha_Z_Vector_long[itx], gamma_Z_Vector_long[itx]),
+                                label=('Fitted Curve: Z with' + str(length_Z_Vector_long) + 'WP'))
                     ax.legend(loc='upper right')
                     ax.grid()
                     ax.set_ylim([-110, -10])
                     ax.set_xlabel('Distance [mm]')
                     ax.set_ylabel('RSS [dB]')
                     ax.set_title('RSM for TX# ' + str(itx + 1))
+
+        plot_fig4 = True
+        if plot_fig4:
+            fig = plt.figure(1)
+
+
+            for itx in analyze_tx:
+                pos = 321 + itx
+                if len(analyze_tx) == 1:
+                    pos = 111
+
+                estimated_plotdata = plotdata_mat
+                rdist_vec = plotdata_mat[:, 0:2] - txpos[itx, 0:2]
+                rdist_temp = np.asarray(np.linalg.norm(rdist_vec, axis=1))  # distance norm: |r_wp -r_txpos|
+                estimated_plotdata[:, 2+itx] = rsm_model(rdist_temp, alpha_line_short[itx], gamma_line_short[itx])
+
+
+
+                ax = fig.add_subplot(pos)
+                rss_mean = estimated_plotdata [:, 2 + itx]
+                rss_var = estimated_plotdata [:, 2 + num_tx + itx]
+
+                rss_mat_ones = np.ones(np.shape(wp_matx)) * (-200)  # set minimum value for not measured points
+                rss_full_vec = np.reshape(rss_mat_ones, (len(xpos) * len(ypos), 1))
+
+                measured_wp_list = np.reshape(measured_wp_list, (len(measured_wp_list), 1))
+                rss_mean = np.reshape(rss_mean, (len(rss_mean), 1))
+
+                rss_full_vec[measured_wp_list, 0] = rss_mean
+
+                rss_full_mat = np.reshape(rss_full_vec, data_shape)
+
+                # mask all points which were not measured
+                rss_full_mat = np.ma.array(rss_full_mat, mask=rss_full_mat < -199)
+
+                val_sequence = np.linspace(-100, -20, 80 / 5 + 1)
+
+                CS = ax.contour(wp_matx, wp_maty, rss_full_mat, val_sequence)
+                ax.clabel(CS, inline=0, fontsize=10)
+                for itx_plot in analyze_tx:
+                    ax.plot(txpos[itx_plot - 1, 0], txpos[itx_plot - 1, 1], 'or')
+
+                ax.grid()
+                ax.set_xlabel('x [mm]')
+                ax.set_ylabel('y [mm]')
+                ax.axis('equal')
+                ax.set_title('RSS field for TX# ' + str(itx + 1))
+
+
 
     plt.show()
 
