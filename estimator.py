@@ -25,24 +25,16 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
 
     tx_freq = [434.00e6, 434.15e6, 434.30e6, 434.45e6, 434.65e6, 433.90e6]
 
-    tx_pos = [[790, 440],
-               [1650, 450],
-               [2530, 460],
-               [2530, 1240],
-               [1650, 1235],
-               [790, 1230]]
-    tx_alpha = [0.013854339628529109,
-                0.0071309466013866158,
-                0.018077579531274993,
-                0.016243668091798915,
-                0.016243668091798915,
-                0.016243668091798915]
-    tx_gamma = [-1.5898021024559508,
-                2.0223747861988461,
-                -5.6650866655302714,
-                -5.1158161676293972,
-                -5.1158161676293972,
-                -5.1158161676293972]
+    tx_pos = [[700, 440],
+               [1560, 450],
+               [2440, 460],
+               [2440, 1240],
+               [1560, 1235],
+               [700, 1230]]
+
+    tx_alpha = [ 0.0110,    0.0048,    0.0121,    0.0121,    0.0083,    0.0107]
+    tx_gamma = [-7.3103 ,  -2.9711,   -9.1468,   -9.5820,   -5.0871,   -6.9999]
+    ekf_param = [6.5411, 7.5723, 9.5922, 11.8720, 21.6396, 53.6692, 52.0241]
 
     oMeasSys = rf.RfEar(434.2e6)
     oMeasSys.set_txparams(tx_freq, tx_pos)
@@ -60,7 +52,7 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
         r_dist = np.sqrt((x[0] - tx_pos[0]) ** 2 + (x[1] - tx_pos[1]) ** 2)
         y_rss = -20 * np.log10(r_dist) - alpha * r_dist - gamma
 
-        return y_rss
+        return y_rss, r_dist
 
     # jacobian of the measurement function
     def h_rss_jacobian(x_est, tx_param):
@@ -81,12 +73,32 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
 
         return h_rss_jac
 
-    def measurement_covariance_model(rss_noise_model):
+    def measurement_covariance_model(rss_noise_model, r_dist, ekf_param):
         """
         estimate measurement noise based on the received signal strength
         :param rss: measured signal strength
         :return: r_mat -- measurement covariance matrix 
         """
+
+        if r_dist <= 150 or r_dist >= 2000:
+                r_sig = 100
+        else:
+            if z_meas >= -55:
+                r_sig = ekf_param[0]
+            elif z_meas < -55 and z_meas >= -65:
+                r_sig = ekf_param[1]
+            elif z_meas< -65 and z_meas>= -75:
+                 r_sig = ekf_param[2]
+            elif z_meas< -75 and z_meas>= -80:
+                r_sig = ekf_param[3]
+            elif z_meas< -80:
+                r_sig = ekf_param[4]
+
+
+        r_mat = r_sig ** 2
+        return r_mat
+
+    """
 
         # simple first try
         if rss_noise_model >= -85:
@@ -97,15 +109,20 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
         r_mat = r_sig ** 2
         return r_mat
 
+
+    """
+
+
     if h_func_select == 'h_rss':
         h = h_rss
         h_jacobian = h_rss_jacobian
     else:
-        print ('You need to select to a measurement function "h" like "h_rss" or "h_dist"!')
-        print ('exit...')
-        return True
+         print ('You need to select to a measurement function "h" like "h_rss" or "h_dist"!')
+         print ('exit...')
+         return True
 
     """ setup figure """
+
     if bplot:
         plt.ion()
         fig1 = plt.figure(1)
@@ -135,6 +152,7 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
             circle_meas_est.append(plt.Circle((txpos_single[0], txpos_single[1]), 0.01, color='g', fill=False))
             ax.add_artist(circle_meas_est[i])
 
+
     """ initialize tracking setup """
     print(str(tx_alpha))
     print(str(tx_gamma))
@@ -150,8 +168,8 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
     p_mat = np.array(np.diag([sig_x1 ** 2, sig_x2 ** 2]))
 
     # process noise
-    sig_w1 = 50
-    sig_w2 = 50
+    sig_w1 = ekf_param[5]
+    sig_w2 = ekf_param[6]
     q_mat = np.array(np.diag([sig_w1 ** 2, sig_w2 ** 2]))
 
     # measurement noise
@@ -167,7 +185,7 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
 
     z_meas = np.zeros(tx_num)
     y_est = np.zeros(tx_num)
-
+    r_dist = np.zeros(tx_num)
     """ Start EKF-loop """
     tracking = True
 
@@ -193,11 +211,11 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
             # iterate through all tx-rss-values
             for itx in range(tx_num):
                 # estimate measurement from x_est
-                y_est[itx] = h(x_est, tx_param[itx])
+                y_est[itx], r_dist[itx] = h(x_est, tx_param[itx])
                 y_tild = z_meas[itx] - y_est[itx]
 
                 # estimate measurement noise based on
-                r_mat = measurement_covariance_model(z_meas[itx])
+                r_mat = measurement_covariance_model(z_meas[itx], r_dist[itx], ekf_param)
 
                 # calc K-gain
                 h_jac_mat = h_jacobian(x_est[:, 0], tx_param[itx])
@@ -246,23 +264,25 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
                 Position[0, 0] = x_est[0];
                 Position[0, 1] = x_est[1];
 
-                f_EKF = open("/home/pi/src/RF_Localization/EKF.txt", "w")
+                #f_EKF = open("/home/pi/src/RF_Localization/EKF.txt", "w")
+                f_EKF = open("src/RF_Localization/EKF.txt", "w")
                 #f_EKF = open("EKF.txt", "w")
                 f_EKF.write(
-                    str(Position[0, 0]) + " " + str(Position[0, 1]) + " " + str(p_mat[0, 0]) + "" + str(
+                    str(Position[0, 0]) + " " + str(Position[0, 1]) + " " + str(p_mat[0, 0]) + " " + str(
                         p_mat[0, 1]) + " " + str(p_mat[1, 0]) + " " + str(p_mat[1, 1]))
                 f_EKF.close
 
 
-                f_position = open("/home/pi/src/RF_Localization/Position.txt", "a")
+                #f_position = open("/home/pi/src/RF_Localization/Position.txt", "a")
+                f_position = open("src/RF_Localization/Position.txt", "a")
                 #f_position = open("Position.txt", "a")
                 if First_meassurement == True:
                     f_position.write("Position Meassurement Starts now" + "\n")
                 f_position.write(str(Position[0, 0]) + " " + str(Position[0, 1]) + "\n")
                 f_position.close
 
-
-                f_RSS = open("/home/pi/src/RF_Localization/Signal_Strength.txt", "a")
+                f_RSS = open("src/RF_Localization/Signal_Strength.txt", "a")
+                #f_RSS = open("/home/pi/src/RF_Localization/Signal_Strength.txt", "a")
                 #f_RSS = open("Signal_Strength.txt", "a")
                 if First_meassurement == True:
                     f_RSS.write("Signal Strength Meassurement Starts now" + "\n")

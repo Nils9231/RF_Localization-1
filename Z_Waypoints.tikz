@@ -1,0 +1,54 @@
+% This file was created by matplotlib2tikz v0.6.12.
+\begin{tikzpicture}
+
+\begin{axis}[
+xlabel={Distance in mm (belt-drive)},
+ylabel={Distance in mm (spindle-drive)},
+xmin=-10, xmax=3100,
+ymin=-10, ymax=1650,
+tick align=outside,
+tick pos=left,
+xmajorgrids,
+x grid style={lightgray!92.026143790849673!black},
+ymajorgrids,
+y grid style={lightgray!92.026143790849673!black}
+]
+\addplot [semithick, red, mark=*, mark size=3, mark options={solid}, only marks, forget plot]
+table {%
+790 1230
+};
+\addplot [semithick, red, mark=*, mark size=3, mark options={solid}, only marks, forget plot]
+table {%
+790 440
+};
+\addplot [semithick, red, mark=*, mark size=3, mark options={solid}, only marks, forget plot]
+table {%
+1650 450
+};
+\addplot [semithick, red, mark=*, mark size=3, mark options={solid}, only marks, forget plot]
+table {%
+2530 460
+};
+\addplot [semithick, red, mark=*, mark size=3, mark options={solid}, only marks, forget plot]
+table {%
+2530 1240
+};
+\addplot [semithick, red, mark=*, mark size=3, mark options={solid}, only marks, forget plot]
+table {%
+1650 1235
+};
+\addplot [semithick, blue, mark=*, mark size=3, mark options={solid}, only marks, forget plot]
+table {%
+1050 550
+1050 800
+1050 1050
+1350 900
+1600 800
+1900 700
+2200 550
+2200 800
+2200 1050
+};
+\end{axis}
+
+\end{tikzpicture}

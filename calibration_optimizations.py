@@ -1,11 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
-
+from matplotlib import cm
 import hippocampus_toolbox as hc_tools
 import rf_plots
 
-def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6], meantype='db_mean'):
+
+
+def analyze_measdata_from_file(analyze_tx = [1, 2, 3, 4,5,6], meantype='db_mean'):
+
     """
 
     :param analyze_tx:
@@ -183,23 +186,26 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6], meantype='db_mean'
         # Model selection
         model_groundtruth = True
         model_Inside = False
-        model_Line_long = False
+        model_Line_long = True
         model_Line_short = True
         model_Z_Vector_small = True
-        model_Z_Vector_long = True
-        Data_Set_Pool = 2   # set Data_Set_Pool to a value 0-4
+        model_Z_Vector_long = False
+        Data_Set_Pool = 3  # set Data_Set_Pool to a value 0-4
 
 
         Inside_Vector = np.zeros((540,), dtype=np.int)
         counter = 0
         Inside_array = np.arange(549, 1464, 1)
         Groundtruth_Vector = np.arange(0, totnumwp, 1)
-        Line_Vector_long = np.arange(992, 1028, 1)
+        #Line_Vector_long = np.arange(992, 1028, 1)
+        Line_Vector_long = np.arange(982, 1036, 1)
         #Line_Vector_short = np.arange(992, 1028, 8)
         #Line_Vector_short = np.arange(976, 1038, 20)
         Line_Vector_short = [982, 992,1001, 1009,1018, 1027, 1036]
         Z_Vector_long= [631, 936, 1241,1064, 947,831, 654, 959, 1264]
-        Z_Vector_small = [631, 1241, 948, 654, 1264]
+        #Z_Vector_small = [631, 1241, 948, 654, 1264]
+        Z_Vector_small = [631,637, 643,648, 936, 1241,1247,1253,1259, 654, 959, 1264]+np.ones((12), dtype=np.int)*61
+
         for ntx in range(0, 15):
             for itx in range(16, 52):
                 Inside_Vector[counter] = Inside_array[itx + 61 * ntx]
@@ -265,7 +271,7 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6], meantype='db_mean'
         y = plotdata_mat[:, 1]
 
         if See_Plots == True:
-            plot_fig1 = True
+            plot_fig1 = False
             if plot_fig1:
                 fig = plt.figure(1)
                 for itx in analyze_tx:
@@ -292,7 +298,7 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6], meantype='db_mean'
 
                     val_sequence = np.linspace(-100, -20, 80 / 5 + 1)
 
-                    CS = ax.contour(wp_matx, wp_maty, rss_full_mat, val_sequence)
+                    CS = ax.contour(wp_matx, wp_maty, rss_full_mat, val_sequence,cmap=cm.jet)
                     ax.clabel(CS, inline=0, fontsize=10)
                     for itx_plot in analyze_tx:
                         ax.plot(txpos[itx_plot - 1, 0], txpos[itx_plot - 1, 1], 'or')
@@ -357,7 +363,7 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6], meantype='db_mean'
                         pos = 111
                     ax = fig.add_subplot(pos)
                     ax.errorbar(rdist, rss_mean, yerr=rss_var,
-                                fmt='ro', ecolor='g', label='Original Data')
+                                fmt='r.',markersize=1, ecolor='g', label='Original Data')
 
 
                     if model_Inside == True:
@@ -384,7 +390,7 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6], meantype='db_mean'
                     ax.set_ylabel('RSS [dB]')
                     ax.set_title('RSM for TX# ' + str(itx + 1))
 
-        plot_fig4 = True
+        plot_fig4 = False
         if plot_fig4:
             fig = plt.figure(1)
 
@@ -420,7 +426,7 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6], meantype='db_mean'
 
                 val_sequence = np.linspace(-100, -20, 80 / 5 + 1)
 
-                CS = ax.contour(wp_matx, wp_maty, rss_full_mat, val_sequence)
+                CS = ax.contour(wp_matx, wp_maty, rss_full_mat, val_sequence,cmap=cm.jet)
                 ax.clabel(CS, inline=0, fontsize=10)
                 for itx_plot in analyze_tx:
                     ax.plot(txpos[itx_plot - 1, 0], txpos[itx_plot - 1, 1], 'or')
@@ -431,7 +437,85 @@ def analyze_measdata_from_file(analyze_tx=[1, 2, 3, 4, 5, 6], meantype='db_mean'
                 ax.axis('equal')
                 ax.set_title('RSS field for TX# ' + str(itx + 1))
 
+        plot_fig5 = False
+        if plot_fig5:
+            fig = plt.figure(5)
+            #for itx in analyze_tx:
+            itx = 5
+            if model_groundtruth == True:
+                rss_mean2 = plotdata_mat[:, 2 + itx]
+                rss_var2 = plotdata_mat[:, 2 + num_tx + itx]
+                rdist2 = np.array(rdist_temp_groundtruth[itx, :], dtype=float)
+                rdata = np.linspace(np.min(rdist_temp_groundtruth), np.max(rdist_temp_groundtruth),
+                                    num=1000)
+            else:
+                rdata = np.linspace(np.min(rdist_temp), np.max(rdist_temp), num=1000)
 
+
+
+            rss_mean2 = np.array(rss_mean2, dtype=float)
+            rss_var2 = np.array(rss_var2, dtype=float)
+            pos = 321 + itx
+            if len(analyze_tx) == 1:
+                pos = 111
+            ax = fig.add_subplot(pos)
+            """"
+            ax.errorbar(rdist2, rss_mean2, yerr=rss_var2,
+                        fmt='b.', markersize=1, ecolor='g', label='Original Data')
+            """
+            rss_mean = plotdata_mat[Data_Set[:], 2 + itx]
+            rss_var = plotdata_mat[Data_Set[:], 2 + num_tx + itx]
+            rdist = np.array(RDIST[itx, :], dtype=float)
+
+            rss_mean = np.array(rss_mean, dtype=float)
+            rss_var = np.array(rss_var, dtype=float)
+            pos = 321 + itx
+            if len(analyze_tx) == 1:
+                pos = 111
+            ax = fig.add_subplot(pos)
+            """
+            ax.errorbar(rdist, rss_mean, yerr=rss_var,
+                        fmt='r.', markersize=5, ecolor='g', label='Original Data')
+            """
+            Data_Set_short = Line_Vector_short
+            RDIST_short = rdist_temp_line_short
+            rss_mean_short = plotdata_mat[Data_Set_short[:], 2 + itx]
+            rdist_short = np.array(RDIST_short[itx, :], dtype=float)
+            rss_mean_short = np.array(rss_mean_short, dtype=float)
+
+
+
+
+            if model_Inside == True:
+                ax.plot(rdata, rsm_model(rdata, alpha[itx], gamma[itx]), label='Fitted Curve')
+            if model_groundtruth == True:
+                ax.plot(rdata, rsm_model(rdata, alpha_Groundtruth[itx], gamma_Groundtruth[itx]),
+                        label='Fitted Groundtruth')
+            if model_Line_long == True:
+                ax.plot(rdata, rsm_model(rdata, alpha_line_long[itx], gamma_line_long[itx]),
+                        label=('Fitted Curve: Line with ' + str(length_Line_Vector_long) + 'WP'))
+            if model_Line_short == False:
+                ax.plot(rdata, rsm_model(rdata, alpha_line_short[itx], gamma_line_short[itx]),
+                        label=('Fitted Curve: Line with' + str(length_Line_Vector_short) + 'WP'))
+            if model_Z_Vector_small == True:
+                ax.plot(rdata, rsm_model(rdata, alpha_Z_Vector_small[itx], gamma_Z_Vector_small[itx]),
+                        label=('Fitted Curve: Z with' + str(length_Z_Vector_small) + 'WP'))
+            if model_Z_Vector_long == True:
+                ax.plot(rdata, rsm_model(rdata, alpha_Z_Vector_long[itx], gamma_Z_Vector_long[itx]),
+                        label=('Fitted Curve: Z with' + str(length_Z_Vector_long) + 'WP'))
+
+            ax.plot(rdist2, rss_mean2, 'b.', markersize=1, label='Full Data Set')
+            ax.plot(rdist, rss_mean, 'r.', markersize=5, label='54 Waypoints')
+            #ax.plot(rdist_short, rss_mean_short, 'k*', markersize=8, label='7 Waypoints')
+            ax.legend(loc='upper right')
+            ax.grid()
+            ax.set_ylim([-110, -10])
+            ax.set_xlabel('Distance [mm]')
+            ax.set_ylabel('RSS [dB]')
+            ax.set_title('RSM for TX# ' + str(itx + 1))
+
+    #from matplotlib2tikz import save as tikz_save
+    #tikz_save('Square_Waypoints.tikz')
 
     plt.show()
 
