@@ -83,34 +83,22 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
         if r_dist <= 150 or r_dist >= 2000:
                 r_sig = 100
         else:
-            if z_meas >= -55:
+            if rss_noise_model >= -55:
                 r_sig = ekf_param[0]
-            elif z_meas < -55 and z_meas >= -65:
+            elif rss_noise_model < -55 and rss_noise_model >= -65:
                 r_sig = ekf_param[1]
-            elif z_meas< -65 and z_meas>= -75:
+            elif rss_noise_model < -65 and rss_noise_model>= -75:
                  r_sig = ekf_param[2]
-            elif z_meas< -75 and z_meas>= -80:
+            elif rss_noise_model < -75 and rss_noise_model>= -80:
                 r_sig = ekf_param[3]
-            elif z_meas< -80:
+            elif rss_noise_model < -80:
                 r_sig = ekf_param[4]
 
 
         r_mat = r_sig ** 2
         return r_mat
 
-    """
 
-        # simple first try
-        if rss_noise_model >= -85:
-            r_sig = 10
-        elif rss_noise_model < -85:
-            r_sig = 100
-
-        r_mat = r_sig ** 2
-        return r_mat
-
-
-    """
 
 
     if h_func_select == 'h_rss':
@@ -180,6 +168,7 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
     # initial values and system dynamic (=eye)
     x_log = np.array([[x0[0]], [x0[1]]])
     x_est = x_log
+    p_mat_est = p_mat
 
     i_mat = np.eye(2)
 
@@ -201,7 +190,7 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
 
             """ prediction """
             x_est = x_est  # + np.random.randn(2, 1) * 1  # = I * x_est
-            p_mat_est = i_mat.dot(p_mat.dot(i_mat)) + q_mat
+            p_mat_est = i_mat.dot(p_mat_est.dot(i_mat)) + q_mat
 
             """ innovation """
             # get new measurement
@@ -219,11 +208,11 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
 
                 # calc K-gain
                 h_jac_mat = h_jacobian(x_est[:, 0], tx_param[itx])
-                s_mat = np.dot(h_jac_mat.transpose(), np.dot(p_mat, h_jac_mat)) + r_mat  # = H^t * P * H + R
-                k_mat = np.dot(p_mat, h_jac_mat / s_mat)  # 1/s_scal since s_mat is dim = 1x1
+                s_mat = np.dot(h_jac_mat.transpose(), np.dot(p_mat_est, h_jac_mat)) + r_mat  # = H^t * P * H + R
+                k_mat = np.dot(p_mat_est, h_jac_mat / s_mat)  # 1/s_scal since s_mat is dim = 1x1
 
                 x_est = x_est + k_mat * y_tild  # = x_est + k * y_tild
-                p_mat = (i_mat - np.dot(k_mat, h_jac_mat.transpose())) * p_mat_est  # = (I-KH)*P
+                p_mat_est = (i_mat - np.dot(k_mat, h_jac_mat.transpose())) * p_mat_est  # = (I-KH)*P
             x_log = np.append(x_log, x_est, axis=1)
 
             """ update figure / plot after all measurements are processed """
