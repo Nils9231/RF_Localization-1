@@ -188,6 +188,8 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
         try:
             x_est[:, 0] = x_log[:, -1]
 
+
+
             """ prediction """
             x_est = x_est  # + np.random.randn(2, 1) * 1  # = I * x_est
             p_mat_est = i_mat.dot(p_mat_est.dot(i_mat)) + q_mat
@@ -197,22 +199,30 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
             freq_peaks, rss = oMeasSys.get_rss_peaks()
             z_meas = rss
 
-            # iterate through all tx-rss-values
-            for itx in range(tx_num):
-                # estimate measurement from x_est
-                y_est[itx], r_dist[itx] = h(x_est, tx_param[itx])
-                y_tild = z_meas[itx] - y_est[itx]
 
-                # estimate measurement noise based on
-                r_mat = measurement_covariance_model(z_meas[itx], r_dist[itx], ekf_param)
+            if (np.sum(z_meas)/6)<=-80 or x_est[0]>2700 or x_est[1]>2400 or x_est[0]<0 or x_est[1]<0 :
+                x_est = np.array([[x0[0]], [x0[1]]])
+                p_mat_est = p_mat
 
-                # calc K-gain
-                h_jac_mat = h_jacobian(x_est[:, 0], tx_param[itx])
-                s_mat = np.dot(h_jac_mat.transpose(), np.dot(p_mat_est, h_jac_mat)) + r_mat  # = H^t * P * H + R
-                k_mat = np.dot(p_mat_est, h_jac_mat / s_mat)  # 1/s_scal since s_mat is dim = 1x1
 
-                x_est = x_est + k_mat * y_tild  # = x_est + k * y_tild
-                p_mat_est = (i_mat - np.dot(k_mat, h_jac_mat.transpose())) * p_mat_est  # = (I-KH)*P
+            else:
+                # iterate through all tx-rss-values
+                for itx in range(tx_num):
+                    # estimate measurement from x_est
+                    y_est[itx], r_dist[itx] = h(x_est, tx_param[itx])
+                    y_tild = z_meas[itx] - y_est[itx]
+
+                    # estimate measurement noise based on
+                    r_mat = measurement_covariance_model(z_meas[itx], r_dist[itx], ekf_param)
+
+                    # calc K-gain
+                    h_jac_mat = h_jacobian(x_est[:, 0], tx_param[itx])
+                    s_mat = np.dot(h_jac_mat.transpose(), np.dot(p_mat_est, h_jac_mat)) + r_mat  # = H^t * P * H + R
+                    k_mat = np.dot(p_mat_est, h_jac_mat / s_mat)  # 1/s_scal since s_mat is dim = 1x1
+
+                    x_est = x_est + k_mat * y_tild  # = x_est + k * y_tild
+                    p_mat_est = (i_mat - np.dot(k_mat, h_jac_mat.transpose())) * p_mat_est  # = (I-KH)*P
+                 #   print((np.sum(z_meas) / 6))
             x_log = np.append(x_log, x_est, axis=1)
 
             """ update figure / plot after all measurements are processed """
@@ -253,8 +263,8 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
                 Position[0, 0] = x_est[0];
                 Position[0, 1] = x_est[1];
 
-                #f_EKF = open("/home/pi/src/RF_Localization/EKF.txt", "w")
-                f_EKF = open("src/RF_Localization/EKF.txt", "w")
+                f_EKF = open("/home/pi/src/RF_Localization/EKF.txt", "w")
+                #f_EKF = open("src/RF_Localization/EKF.txt", "w")
                 #f_EKF = open("EKF.txt", "w")
                 f_EKF.write(
                     str(Position[0, 0]) + " " + str(Position[0, 1]) + " " + str(p_mat[0, 0]) + " " + str(
@@ -262,16 +272,16 @@ def map_path_ekf(x0, h_func_select='h_rss', bplot=False, blog=False, bprintdata=
                 f_EKF.close
 
 
-                #f_position = open("/home/pi/src/RF_Localization/Position.txt", "a")
-                f_position = open("src/RF_Localization/Position.txt", "a")
+                f_position = open("/home/pi/src/RF_Localization/Position.txt", "a")
+                #f_position = open("src/RF_Localization/Position.txt", "a")
                 #f_position = open("Position.txt", "a")
                 if First_meassurement == True:
                     f_position.write("Position Meassurement Starts now" + "\n")
                 f_position.write(str(Position[0, 0]) + " " + str(Position[0, 1]) + "\n")
                 f_position.close
 
-                f_RSS = open("src/RF_Localization/Signal_Strength.txt", "a")
-                #f_RSS = open("/home/pi/src/RF_Localization/Signal_Strength.txt", "a")
+                #f_RSS = open("src/RF_Localization/Signal_Strength.txt", "a")
+                f_RSS = open("/home/pi/src/RF_Localization/Signal_Strength.txt", "a")
                 #f_RSS = open("Signal_Strength.txt", "a")
                 if First_meassurement == True:
                     f_RSS.write("Signal Strength Meassurement Starts now" + "\n")
